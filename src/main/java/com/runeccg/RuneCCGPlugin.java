@@ -51,6 +51,7 @@ public class RuneCCGPlugin extends Plugin
 	private NavigationButton navButton;
 	private final Map<Skill, Integer> previousXpMap = new HashMap<>();
 	private boolean userConfirmedEventWorld = false;
+	private boolean eventWorldPromptShown = false;
 
 	// Secret key for HMAC signing - KEEP THIS SECRET
 	// In production, this should match the key on your backend
@@ -113,6 +114,7 @@ public class RuneCCGPlugin extends Plugin
 		log.info("RuneCCG plugin stopped!");
 		clientToolbar.removeNavigation(navButton);
 		userConfirmedEventWorld = false;
+		eventWorldPromptShown = false;
 	}
 
 	@Subscribe
@@ -131,6 +133,7 @@ public class RuneCCGPlugin extends Plugin
 				 gameStateChanged.getGameState() == GameState.HOPPING)
 		{
 			userConfirmedEventWorld = false;
+			eventWorldPromptShown = false;
 			previousXpMap.clear(); // Clear XP tracking when changing worlds
 
 			// Disable panel when logged out
@@ -284,20 +287,25 @@ public class RuneCCGPlugin extends Plugin
 
 	private void checkEventWorld()
 	{
-		if (isEventWorld())
+		if (!isEventWorld())
 		{
-			SwingUtilities.invokeLater(() ->
-					panel.showEventWorldWarning(() -> {
-						userConfirmedEventWorld = true;
-						previousXpMap.clear(); // Clear the map so XP tracking starts fresh
-						panel.rebuildNormalUI();
-						panel.updateProgress(getCurrentXp(), getTotalCoins());
-					})
-			);
-		}
-		else
-		{
+			// Normal world — nothing to confirm, allow XP tracking immediately
 			userConfirmedEventWorld = true;
+			return;
 		}
+		if (eventWorldPromptShown)
+		{
+			return;
+		}
+		eventWorldPromptShown = true;
+
+		SwingUtilities.invokeLater(() ->
+			panel.showEventWorldWarning(() -> {
+				userConfirmedEventWorld = true;
+				previousXpMap.clear(); // Clear the map so XP tracking starts fresh
+				panel.rebuildNormalUI();
+				panel.updateProgress(getCurrentXp(), getTotalCoins());
+			})
+		);
 	}
 }
